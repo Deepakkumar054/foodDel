@@ -3,7 +3,7 @@ import './PlaceOrder.css'
 import { StoreContext } from '../../context/storeContext'
 import axios from 'axios'
 import { useNavigate } from 'react-router-dom'
-import { get } from 'mongoose'
+
 
 const PlaceOrder = () => {
 
