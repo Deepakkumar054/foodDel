@@ -21,7 +21,14 @@ const port = 5000;
 
 //middleware
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",           // local frontend
+    "https://fooddel-ojd3.onrender.com" // deployed frontend
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 
 //db connection
 connectDB();
