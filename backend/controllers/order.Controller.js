@@ -1,31 +1,30 @@
-// controllers/order.controller.js
 import orderModel from "../models/orderModel.js";
 import userModel from "../models/userModel.js";
 import Stripe from "stripe";
 
-// Initialize Stripe with your secret key
+// Initialize Stripe
 
-// Replace with your deployed frontend URL on Render
+// Deployed frontend URL
 const FRONTEND_URL = "https://fooddel-frontend-svuk.onrender.com";
 
-// 1️⃣ Place Order
+// Place Order
 export const placeOrder = async (req, res) => {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   try {
-    // Create new order in DB
+    // 1️⃣ Create new order in DB
     const newOrder = new orderModel({
-      userId: req.userId, // comes from authMiddleware
+      userId: req.userId,
       items: req.body.items,
       amount: req.body.amount,
       address: req.body.address,
     });
     await newOrder.save();
 
-    // Clear user's cart
+    // 2️⃣ Clear user's cart
     await userModel.findByIdAndUpdate(req.userId, { cartData: {} });
 
-    // Stripe line items
-    const line_items = req.body.items.map(item => ({
+    // 3️⃣ Stripe line items
+    const line_items = req.body.items.map((item) => ({
       price_data: {
         currency: "inr",
         product_data: { name: item.name },
@@ -34,17 +33,32 @@ export const placeOrder = async (req, res) => {
       quantity: item.quantity,
     }));
 
-    // Add delivery fee
+    // Add delivery fee (minimum ₹50 total for Stripe)
+    const DELIVERY_FEE = 50; // ₹50 = 5000 paise
     line_items.push({
       price_data: {
         currency: "inr",
         product_data: { name: "Delivery Charges" },
-        unit_amount: 200, // ₹2 in paise
+        unit_amount: DELIVERY_FEE * 100,
       },
       quantity: 1,
     });
 
-    // Create Stripe session
+    // 4️⃣ Calculate total amount in paise
+    const totalAmountPaise = line_items.reduce(
+      (sum, item) => sum + item.price_data.unit_amount * item.quantity,
+      0
+    );
+
+    // Stripe requires minimum amount of 50 cents (~₹50)
+    if (totalAmountPaise < 50) {
+      return res.status(400).json({
+        success: false,
+        message: "Total order amount is too low for Stripe payment. Minimum ₹50 required.",
+      });
+    }
+
+    // 5️⃣ Create Stripe checkout session
     const session = await stripe.checkout.sessions.create({
       line_items,
       mode: "payment",
@@ -59,7 +73,7 @@ export const placeOrder = async (req, res) => {
   }
 };
 
-// 2️⃣ Verify Payment
+// Verify payment after redirect
 export const verifyOrder = async (req, res) => {
   const { orderId, success } = req.body;
   try {
@@ -71,12 +85,12 @@ export const verifyOrder = async (req, res) => {
       return res.json({ success: false, message: "Payment Failed" });
     }
   } catch (error) {
-    console.error(error);
+    console.log(error);
     res.json({ success: false, message: "Error while verifying order" });
   }
 };
 
-// 3️⃣ Get Orders for Logged-in User
+// Get orders for logged-in user
 export const userOrders = async (req, res) => {
   try {
     const orders = await orderModel.find({ userId: req.userId });
@@ -87,7 +101,7 @@ export const userOrders = async (req, res) => {
   }
 };
 
-// 4️⃣ List All Orders (Admin)
+// List all orders (admin)
 export const listOrders = async (req, res) => {
   try {
     const orders = await orderModel.find({});
@@ -98,7 +112,7 @@ export const listOrders = async (req, res) => {
   }
 };
 
-// 5️⃣ Update Order Status (Admin)
+// Update order status (admin)
 export const updateStatus = async (req, res) => {
   try {
     await orderModel.findByIdAndUpdate(req.body.orderId, { status: req.body.status });
