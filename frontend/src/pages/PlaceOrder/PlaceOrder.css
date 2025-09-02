@@ -1,20 +1,25 @@
-.place-order{
+.place-order {
     display: flex;
-    align-items: start;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 50px;
     margin-top: 80px;
+    flex-wrap: wrap; /* allow wrapping on small screens */
 }
-.place-order-left{
+
+.place-order-left {
     width: 100%;
-    max-width: max(30% , 500px);
+    max-width: 500px;
+    flex: 1;
 }
-.place-order-left .title{
+
+.place-order-left .title {
     font-size: 30px;
     font-weight: 600;
     margin-bottom: 50px;
 }
-.place-order-left input{
+
+.place-order-left input {
     margin-bottom: 15px;
     width: 100%;
     padding: 10px;
@@ -22,14 +27,65 @@
     border-radius: 4px;
     outline-color: tomato;
 }
-.place-order-left .multi-fields{
+
+.place-order-left .multi-fields {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap; /* wrap fields on small screens */
 }
-.place-order-right{
+
+.place-order-left .multi-fields input {
+    flex: 1; /* inputs share available width */
+}
+
+.place-order-right {
     width: 100%;
-    max-width: max(40% , 500px);
+    max-width: 500px;
+    flex: 1;
 }
-.place-order .cart-total button{
+
+.place-order .cart-total {
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.place-order .cart-total button {
     margin-top: 30px;
+    width: 100%;
+    padding: 12px;
+    background-color: tomato;
+    color: #fff;
+    font-size: 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.place-order .cart-total button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+}
+
+/* 🔹 Mobile responsiveness */
+@media (max-width: 768px) {
+    .place-order {
+        flex-direction: column;
+        gap: 30px;
+        margin-top: 40px;
+    }
+
+    .place-order-left,
+    .place-order-right {
+        max-width: 100%;
+    }
+
+    .place-order-left .title {
+        font-size: 24px;
+        margin-bottom: 30px;
+    }
+
+    .place-order-left .multi-fields {
+        flex-direction: column;
+    }
 }
