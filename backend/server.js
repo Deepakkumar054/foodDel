@@ -7,47 +7,35 @@ import userRouter from './routes/user.route.js';
 import cartRouter from './routes/cart.route.js';
 import orderRouter from './routes/order.route.js';
 
-// console.log("Stripe Key Loaded:", process.env.STRIPE_SECRET_KEY ? "✅ Yes" : "❌ No");
 dotenv.config();
 
-// console.log("Raw Stripe Key:", process.env.STRIPE_SECRET_KEY);
-
-
-//app config
-
 const app = express();
-const port = 5000;
+const PORT = process.env.PORT || 5000;
 
-
-//middleware
+// Middleware
 app.use(express.json());
-// app.use(cors());
 app.use(cors({
   origin: [
-    "http://localhost:5173",                     // local frontend
+    "http://localhost:5173", // local frontend
     "https://fooddel-frontend-svuk.onrender.com" // deployed frontend
   ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
-  credentials: true,
-  allowedHeaders: ["Content-Type", "token"] // include 'token' because you send it in headers
+  methods: ["GET","POST","PUT","DELETE"],
+  credentials: true
 }));
 
-//db connection
+// Connect DB
 connectDB();
 
-//api endpoints
 // Serve uploaded images
 app.use('/images', express.static('uploads'));
-app.use('/api/food',foodRouter);
-app.use('/api/user',userRouter);
-app.use('/api/cart',cartRouter);
-app.use('/api/order',orderRouter);
 
-app.get('/',(req,res)=>{
-    res.send("App is working")
-})
+// Routes
+app.use('/api/food', foodRouter);
+app.use('/api/user', userRouter);
+app.use('/api/cart', cartRouter);
+app.use('/api/order', orderRouter);
 
-app.listen(port,(req,res)=>{
-    console.log(`Server is running on port ${port}`);
-    
-})
+// Test endpoint
+app.get('/', (req,res) => res.send("Backend is working"));
+
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
