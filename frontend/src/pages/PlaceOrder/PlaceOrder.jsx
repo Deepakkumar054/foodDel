@@ -1,70 +1,116 @@
-import orderModel from "../models/orderModel.js";
-import userModel from "../models/userModel.js";
-import Stripe from "stripe";
+import React, { useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { StoreContext } from '../../context/StoreContext';
+import axios from 'axios';
+import './PlaceOrder.css';
 
-// Replace with your deployed frontend URL
-const FRONTEND_URL = "https://fooddel-frontend-svuk.onrender.com";
+const PlaceOrder = () => {
+  const { getTotalCartAmount, token, food_list, cartItems, url } = useContext(StoreContext);
+  const navigate = useNavigate();
 
-export const placeOrder = async (req, res) => {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const [data, setData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    street: "",
+    city: "",
+    state: "",
+    zipcode: "",
+    country: "",
+    phone: ""
+  });
 
-  try {
-    const { items, amount, address } = req.body;
+  const [loading, setLoading] = useState(false);
 
-    // ✅ Validation
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: "No items in the order" });
+  const onChangeHandler = (e) => {
+    const { name, value } = e.target;
+    setData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const placeOrder = async (e) => {
+    e.preventDefault();
+
+    if (!token) return navigate('/login');
+
+    const orderItems = food_list
+      .filter(item => cartItems[item._id] > 0)
+      .map(item => ({ ...item, quantity: cartItems[item._id] }));
+
+    if (orderItems.length === 0) return alert("Cart is empty");
+
+    const orderData = {
+      address: data,
+      items: orderItems,
+      amount: getTotalCartAmount() // backend will handle delivery fee
+    };
+
+    try {
+      setLoading(true);
+      const response = await axios.post(`${url}/api/order/place`, orderData, {
+        headers: { token }
+      });
+
+      if (response.data.success && response.data.session_url) {
+        // redirect to Stripe checkout
+        window.location.href = response.data.session_url;
+      } else {
+        alert("Failed to create payment session.");
+      }
+    } catch (err) {
+      console.error("Order placement failed:", err);
+      alert("Failed to place order. Try again.");
+    } finally {
+      setLoading(false);
     }
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({ success: false, message: "Invalid total amount" });
-    }
-    if (!address) {
-      return res.status(400).json({ success: false, message: "Address is required" });
-    }
+  };
 
-    // 1️⃣ Create order in DB
-    const newOrder = new orderModel({
-      userId: req.userId,
-      items,
-      amount,
-      address,
-    });
-    await newOrder.save();
+  useEffect(() => {
+    if (!token || getTotalCartAmount() === 0) navigate('/cart');
+  }, [token]);
 
-    // 2️⃣ Clear user's cart
-    await userModel.findByIdAndUpdate(req.userId, { cartData: {} });
+  return (
+    <form className="place-order" onSubmit={placeOrder}>
+      <div className="place-order-left">
+        <p className="title">Delivery Information</p>
+        <div className="multi-fields">
+          <input required name="firstName" value={data.firstName} onChange={onChangeHandler} placeholder="First Name" />
+          <input required name="lastName" value={data.lastName} onChange={onChangeHandler} placeholder="Last Name" />
+        </div>
+        <input required name="email" value={data.email} onChange={onChangeHandler} type="email" placeholder="Email" />
+        <input required name="street" value={data.street} onChange={onChangeHandler} placeholder="Street" />
+        <div className="multi-fields">
+          <input required name="city" value={data.city} onChange={onChangeHandler} placeholder="City" />
+          <input required name="state" value={data.state} onChange={onChangeHandler} placeholder="State" />
+        </div>
+        <div className="multi-fields">
+          <input required name="zipcode" value={data.zipcode} onChange={onChangeHandler} placeholder="Zip Code" />
+          <input required name="country" value={data.country} onChange={onChangeHandler} placeholder="Country" />
+        </div>
+        <input required name="phone" value={data.phone} onChange={onChangeHandler} placeholder="Phone" />
+      </div>
 
-    // 3️⃣ Stripe line items
-    const line_items = items.map((item) => ({
-      price_data: {
-        currency: "inr",
-        product_data: { name: item.name },
-        unit_amount: Math.max(50, Math.round(Number(item.price) * 100)), // minimum 50 paise
-      },
-      quantity: item.quantity,
-    }));
-
-    // Add delivery fee
-    line_items.push({
-      price_data: {
-        currency: "inr",
-        product_data: { name: "Delivery Charges" },
-        unit_amount: 200, // ₹2
-      },
-      quantity: 1,
-    });
-
-    // 4️⃣ Create Stripe checkout session
-    const session = await stripe.checkout.sessions.create({
-      line_items,
-      mode: "payment",
-      success_url: `${FRONTEND_URL}/verify?success=true&orderId=${newOrder._id}`,
-      cancel_url: `${FRONTEND_URL}/verify?success=false&orderId=${newOrder._id}`,
-    });
-
-    res.json({ success: true, session_url: session.url });
-  } catch (error) {
-    console.error("Order placement failed:", error);
-    res.status(500).json({ success: false, message: "Error while placing order" });
-  }
+      <div className="place-order-right">
+        <div className="cart-total">
+          <h2>Cart Totals</h2>
+          <div className="cart-total-details">
+            <p>Subtotal</p>
+            <p>${getTotalCartAmount()}</p>
+          </div>
+          <div className="cart-total-details">
+            <p>Delivery Fee</p>
+            <p>$2</p>
+          </div>
+          <div className="cart-total-details">
+            <b>Total</b>
+            <b>${getTotalCartAmount() + 2}</b>
+          </div>
+          <button type="submit" disabled={loading}>
+            {loading ? "Processing..." : "PROCEED TO PAYMENT"}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
 };
+
+export default PlaceOrder;
