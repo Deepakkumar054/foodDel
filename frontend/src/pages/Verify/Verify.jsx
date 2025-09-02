@@ -5,43 +5,35 @@ import { StoreContext } from '../../context/StoreContext';
 import axios from 'axios';
 
 const Verify = () => {
-  const [searchParams] = useSearchParams();
-  const success = searchParams.get('success');
-  const orderId = searchParams.get('orderId');
-  const { url } = useContext(StoreContext);
 
-  const navigate = useNavigate();
+    const[searchParams,setSearchParams] = useSearchParams();
+    const success = searchParams.get('success')
+    const orderId = searchParams.get('orderId')
+    const{url} = useContext(StoreContext);
 
-  const verifyPayment = async () => {
-    try {
-      const token = localStorage.getItem("token"); // 👈 get token
-      const response = await axios.post(
-        url + '/api/order/verify',
-        { success, orderId },
-        { headers: { token } } // 👈 send token in headers
-      );
+    const navigate = useNavigate();
 
-      if (response.data.success) {
-        navigate("/myorders");
-      } else {
-        navigate("/");
-      }
-    } catch (error) {
-      console.error("❌ Verification failed:", error);
-      navigate("/");
+    const verifyPayment = async()=>{
+        const response = await axios.post(url+'/api/order/verify',{success,orderId});
+        if(response.data.success){
+            navigate("/myorders");
+        }
+        else{
+            navigate("/")
+        }
     }
-  };
-
-  useEffect(() => {
-    verifyPayment();
-    // eslint-disable-next-line
-  }, []);
+    useEffect(()=>{
+        verifyPayment();
+    },[])
 
   return (
     <div className='verify'>
-      <div className="spinner"></div>
+        <div className="spinner">
+
+        </div>
+        
     </div>
-  );
+  )
 }
 
-export default Verify;
+export default Verify
