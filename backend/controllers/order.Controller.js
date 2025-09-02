@@ -4,13 +4,13 @@ import userModel from "../models/userModel.js";
 import Stripe from "stripe";
 
 // Initialize Stripe with your secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Replace with your deployed frontend URL on Render
 const FRONTEND_URL = "https://fooddel-frontend-svuk.onrender.com";
 
 // 1️⃣ Place Order
 export const placeOrder = async (req, res) => {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   try {
     // Create new order in DB
     const newOrder = new orderModel({
